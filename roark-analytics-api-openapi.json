@@ -1,0 +1,2129 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Roark Analytics API",
+    "description": "# Roark Analytics API - Voice AI Analytics Platform\n\nThe Roark Analytics API provides comprehensive monitoring, evaluation, and analytics capabilities for voice AI agents. This API allows developers to seamlessly integrate with the Roark platform to track call quality, analyze agent performance, and extract insights from voice interactions.\n\n## Key Features\n\n- **Real-time Call Analysis**: Upload and analyze voice call recordings with AI-powered insights\n- **Sentiment Analysis**: Extract emotional tone, key phrases, and sentiment scores across 64+ emotions\n- **Agent Performance Evaluation**: Create custom evaluation jobs with configurable metrics and scoring\n- **Platform Integrations**: Native support for VAPI and Retell AI with webhook-based data ingestion\n- **Custom Analytics**: Build custom analytics pipelines with flexible data models and properties\n\n## Authentication\n\nAll API endpoints require Bearer token authentication. Include your API token in the Authorization header:\n\n```\nAuthorization: Bearer YOUR_API_TOKEN\n```\n\n## Rate Limiting\n\nThe API implements rate limiting to ensure service stability. Rate limit headers are included in responses.\n\n## Error Handling\n\nThe API uses standard HTTP status codes and returns structured error responses with detailed error information including error types, codes, and human-readable messages.\n\n## Rust Code Generation\n\nThis OpenAPI specification has been optimized for Rust code generation with:\n- Snake_case field naming conventions\n- Proper nullable field handling with Option<T>\n- Comprehensive documentation for generated code\n- Type-safe enum definitions\n- Structured error handling",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Roark Analytics Support",
+      "url": "https://docs.roark.ai",
+      "email": "support@roark.ai"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.roark.ai",
+      "description": "Production API server for Roark Analytics platform"
+    }
+  ],
+  "security": [
+    {
+      "bearer_auth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Bearer token authentication using JWT format. Obtain your API key from the Roark dashboard."
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "description": "Standard API response wrapper containing data and metadata",
+        "properties": {
+          "data": {
+            "description": "The main response payload"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse"
+      },
+      "HealthStatus": {
+        "type": "string",
+        "enum": [
+          "healthy",
+          "degraded",
+          "unhealthy"
+        ],
+        "description": "Health status of the API service:\n- healthy: All systems operational\n- degraded: Some non-critical systems experiencing issues\n- unhealthy: Critical systems down or experiencing major issues",
+        "title": "HealthStatus"
+      },
+      "HealthResponse": {
+        "type": "object",
+        "description": "Health check response providing service status and version information",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/HealthStatus"
+          },
+          "version": {
+            "type": "string",
+            "description": "Current API version identifier",
+            "example": "1.0.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the health check was performed",
+            "example": "2025-06-17T14:12:48.584Z"
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "description": "Service uptime in seconds",
+            "minimum": 0,
+            "example": 86400
+          },
+          "dependencies": {
+            "type": "object",
+            "description": "Health status of external dependencies",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HealthStatus"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "timestamp"
+        ],
+        "title": "HealthResponse"
+      },
+      "ErrorType": {
+        "type": "string",
+        "enum": [
+          "validation",
+          "authentication",
+          "forbidden",
+          "not_found",
+          "rate_limit",
+          "internal"
+        ],
+        "description": "Error type classification:\n- validation: Request validation failed (400)\n- authentication: Authentication required or invalid (401)\n- forbidden: Insufficient permissions (403)\n- not_found: Requested resource not found (404)\n- rate_limit: Rate limit exceeded (429)\n- internal: Internal server error (500)",
+        "title": "ErrorType"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standardized error response with detailed error information",
+        "properties": {
+          "error_type": {
+            "$ref": "#/components/schemas/ErrorType"
+          },
+          "error_code": {
+            "type": "string",
+            "description": "Machine-readable error code identifier for programmatic handling",
+            "examples": [
+              "invalid_parameter",
+              "missing_required_field",
+              "unauthorized",
+              "resource_not_found"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message providing context about the error",
+            "examples": [
+              "The request was invalid",
+              "Authentication required",
+              "Rate limit exceeded"
+            ]
+          },
+          "parameter": {
+            "type": "string",
+            "description": "The specific parameter that caused the error (if applicable)",
+            "examples": [
+              "email",
+              "user_id",
+              "recording_url"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional contextual information about the error",
+            "additionalProperties": true
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Unique request identifier for debugging and support purposes",
+            "example": "req_1234567890abcdef"
+          }
+        },
+        "required": [
+          "error_type",
+          "error_code",
+          "message"
+        ],
+        "title": "ErrorResponse"
+      },
+      "ParticipantRole": {
+        "type": "string",
+        "enum": [
+          "agent",
+          "customer"
+        ],
+        "description": "Role of a call participant:\n- agent: AI voice agent or human agent handling the call\n- customer: End user or customer interacting with the agent",
+        "title": "ParticipantRole"
+      },
+      "CallDirection": {
+        "type": "string",
+        "enum": [
+          "inbound",
+          "outbound"
+        ],
+        "description": "Direction of the call:\n- inbound: Customer initiated call to the agent\n- outbound: Agent initiated call to the customer",
+        "title": "CallDirection"
+      },
+      "CallStatus": {
+        "type": "string",
+        "enum": [
+          "ringing",
+          "in_progress",
+          "ended"
+        ],
+        "description": "Current status of the call:\n- ringing: Call is being established but not yet connected\n- in_progress: Call is active and participants are connected\n- ended: Call has been terminated",
+        "title": "CallStatus"
+      },
+      "InterfaceType": {
+        "type": "string",
+        "enum": [
+          "phone",
+          "web"
+        ],
+        "description": "Interface type used for the call:\n- phone: Traditional phone call (PSTN, SIP, etc.)\n- web: Web-based call (WebRTC, browser-based)",
+        "title": "InterfaceType"
+      },
+      "CallEndedStatus": {
+        "type": "string",
+        "enum": [
+          "agent_ended_call",
+          "agent_transferred_call",
+          "agent_error",
+          "customer_ended_call",
+          "voice_mail_reached",
+          "silence_time_out",
+          "phone_call_provider_connection_error",
+          "customer_did_not_answer",
+          "customer_busy",
+          "dial_error",
+          "max_duration_reached",
+          "unknown"
+        ],
+        "description": "High-level call termination status indicating how the call ended:\n- agent_ended_call: Agent terminated the call normally\n- agent_transferred_call: Agent transferred the call to another party\n- agent_error: Call ended due to agent system error\n- customer_ended_call: Customer hung up or terminated the call\n- voice_mail_reached: Call went to voicemail\n- silence_time_out: Call ended due to prolonged silence\n- phone_call_provider_connection_error: Telephony provider connection failure\n- customer_did_not_answer: Customer did not pick up the call\n- customer_busy: Customer line was busy\n- dial_error: Error occurred during dialing\n- max_duration_reached: Call reached maximum allowed duration\n- unknown: Call termination reason unknown",
+        "title": "CallEndedStatus"
+      },
+      "CallParticipant": {
+        "type": "object",
+        "description": "Information about a participant in a voice call",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name of the participant",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "John Doe"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Phone number of the participant in E.164 format",
+            "minLength": 3,
+            "maxLength": 20,
+            "pattern": "^\\+?[1-9]\\d{1,14}$",
+            "example": "+15551234567"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ParticipantRole"
+          },
+          "spoke_first": {
+            "type": "boolean",
+            "description": "Whether this participant was the first to speak in the call",
+            "example": true
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "description": "Whether this participant is a simulated/synthetic voice for testing",
+            "example": false
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "CallParticipant"
+      },
+      "ToolParameterType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "number",
+          "boolean"
+        ],
+        "description": "Data type of a tool parameter",
+        "title": "ToolParameterType"
+      },
+      "ToolParameter": {
+        "type": "object",
+        "description": "Parameter passed to a tool during invocation",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the parameter"
+          },
+          "parameter_type": {
+            "$ref": "#/components/schemas/ToolParameterType"
+          },
+          "value": {
+            "description": "The actual parameter value (type varies based on parameter_type)"
+          }
+        },
+        "required": [
+          "parameter_type",
+          "value"
+        ],
+        "title": "ToolParameter"
+      },
+      "ToolInvocation": {
+        "type": "object",
+        "description": "Details of a tool or function invocation during a call",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name identifier of the invoked tool or function",
+            "example": "book_appointment"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the tool's purpose",
+            "example": "Books a dental appointment for the customer"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Parameters provided to the tool during invocation",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ToolParameter"
+                },
+                {}
+              ]
+            }
+          },
+          "result": {
+            "description": "Result returned by the tool after execution (can be string or object)",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "start_offset_ms": {
+            "type": "integer",
+            "description": "Offset in milliseconds from call start when tool was invoked",
+            "minimum": 0,
+            "example": 5000
+          },
+          "end_offset_ms": {
+            "type": "integer",
+            "description": "Offset in milliseconds from call start when tool execution completed",
+            "minimum": 0,
+            "example": 7500
+          }
+        },
+        "required": [
+          "name",
+          "parameters",
+          "result",
+          "start_offset_ms"
+        ],
+        "title": "ToolInvocation"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "in_progress",
+          "completed",
+          "failed"
+        ],
+        "description": "Status of an analysis or evaluation job:\n- pending: Job is queued and waiting to be processed\n- in_progress: Job is currently being processed\n- completed: Job has finished successfully\n- failed: Job encountered an error and could not complete",
+        "title": "JobStatus"
+      },
+      "CallData": {
+        "type": "object",
+        "description": "Comprehensive call information including participants, timing, and metadata",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the call record"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CallStatus"
+              },
+              {
+                "default": "in_progress"
+              }
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "description": "AI-generated summary of the call content and outcomes",
+            "example": "Customer called to reschedule dental appointment. Successfully moved appointment from Tuesday to Friday."
+          },
+          "call_direction": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CallDirection"
+              },
+              {
+                "default": "inbound"
+              }
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the call began",
+            "example": "2025-06-17T14:12:48.580Z"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the call ended (null if call is ongoing)"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Total call duration in milliseconds (null if call is ongoing)",
+            "minimum": 0,
+            "example": 120000
+          },
+          "ended_reason": {
+            "type": "string",
+            "description": "Detailed reason why the call ended",
+            "example": "Customer completed their request and ended the call"
+          },
+          "ended_status": {
+            "$ref": "#/components/schemas/CallEndedStatus"
+          },
+          "is_test": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this is a test call used for development or QA purposes"
+          },
+          "participants": {
+            "type": "array",
+            "description": "List of call participants (exactly 2: agent and customer)",
+            "items": {
+              "$ref": "#/components/schemas/CallParticipant"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "tool_invocations": {
+            "type": "array",
+            "description": "List of tools or functions invoked during the call",
+            "items": {
+              "$ref": "#/components/schemas/ToolInvocation"
+            }
+          },
+          "properties": {
+            "type": "object",
+            "description": "Custom key-value properties for filtering and categorization",
+            "additionalProperties": true,
+            "example": {
+              "business_name": "Dental Clinic",
+              "appointment_type": "cleaning"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "call_direction",
+          "started_at",
+          "is_test",
+          "participants"
+        ],
+        "title": "CallData"
+      },
+      "CallAnalysisJob": {
+        "type": "object",
+        "description": "Analysis job information with associated call context",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for tracking the analysis job progress"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "call": {
+            "$ref": "#/components/schemas/CallData"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the analysis job was created"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the analysis job completed (null if still processing)"
+          },
+          "error_message": {
+            "type": "string",
+            "description": "Error message if the job failed"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "call"
+        ],
+        "title": "CallAnalysisJob"
+      },
+      "CallAnalysisCreateRequest": {
+        "type": "object",
+        "description": "Request payload for creating a new call analysis job",
+        "properties": {
+          "recording_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Publicly accessible URL of the call recording file (WAV or MP3 format). Can be a signed URL with appropriate expiration.",
+            "example": "https://example.com/recordings/call-12345.wav"
+          },
+          "stereo_recording_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional URL of stereo recording in WAV format for enhanced audio analysis and playback experience",
+            "example": "https://example.com/recordings/call-12345-stereo.wav"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the call started",
+            "example": "2025-06-17T14:12:48.580Z"
+          },
+          "interface_type": {
+            "$ref": "#/components/schemas/InterfaceType"
+          },
+          "call_direction": {
+            "$ref": "#/components/schemas/CallDirection"
+          },
+          "participants": {
+            "type": "array",
+            "description": "Exactly two participants: one agent and one customer",
+            "items": {
+              "$ref": "#/components/schemas/CallParticipant"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "ended_status": {
+            "$ref": "#/components/schemas/CallEndedStatus"
+          },
+          "ended_reason": {
+            "type": "string",
+            "description": "Additional context about why the call ended",
+            "example": "Customer completed appointment booking successfully"
+          },
+          "tool_invocations": {
+            "type": "array",
+            "description": "List of tools/functions invoked during the call",
+            "items": {
+              "$ref": "#/components/schemas/ToolInvocation"
+            }
+          },
+          "is_test": {
+            "type": "boolean",
+            "default": false,
+            "description": "Mark this as a test call for development/QA purposes"
+          },
+          "vapi_call_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Original VAPI call ID if importing from VAPI platform"
+          },
+          "retell_call_id": {
+            "type": "string",
+            "description": "Original Retell call ID if importing from Retell platform"
+          },
+          "properties": {
+            "type": "object",
+            "description": "Custom metadata properties for filtering and categorization",
+            "additionalProperties": true,
+            "example": {
+              "business_name": "Acme Dental",
+              "campaign_id": "summer-promotion"
+            }
+          }
+        },
+        "required": [
+          "recording_url",
+          "started_at",
+          "interface_type",
+          "call_direction",
+          "participants"
+        ],
+        "title": "CallAnalysisCreateRequest"
+      },
+      "EvaluationJobStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "success",
+          "failure"
+        ],
+        "description": "Evaluation job processing status:\n- pending: Job is queued and waiting to be processed\n- processing: Job is currently being evaluated\n- success: Evaluation completed successfully\n- failure: Evaluation failed due to an error",
+        "title": "EvaluationJobStatus"
+      },
+      "MetricValueType": {
+        "type": "string",
+        "enum": [
+          "numeric",
+          "boolean",
+          "text"
+        ],
+        "description": "Type of value stored in an evaluation metric:\n- numeric: Numerical score or measurement (e.g., 0.85, 7.5)\n- boolean: True/false evaluation result\n- text: Text-based evaluation result or category",
+        "title": "MetricValueType"
+      },
+      "MetricRole": {
+        "type": "string",
+        "enum": [
+          "primary",
+          "secondary"
+        ],
+        "description": "Role of the metric in evaluation:\n- primary: Main evaluation metric used for scoring\n- secondary: Supporting metric providing additional context",
+        "title": "MetricRole"
+      },
+      "ScoreClassification": {
+        "type": "string",
+        "enum": [
+          "success",
+          "failure",
+          "irrelevant"
+        ],
+        "description": "Classification of the evaluation score:\n- success: Evaluation indicates successful performance\n- failure: Evaluation indicates poor or failed performance  \n- irrelevant: Evaluation not applicable to this call",
+        "title": "ScoreClassification"
+      },
+      "EvaluationMetric": {
+        "type": "object",
+        "description": "Individual metric result from an evaluation run",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the metric"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the evaluation metric",
+            "example": "sentiment_score"
+          },
+          "value_type": {
+            "$ref": "#/components/schemas/MetricValueType"
+          },
+          "numeric_value": {
+            "type": "number",
+            "description": "Numeric value of the metric (for numeric metrics)",
+            "example": 0.85
+          },
+          "boolean_value": {
+            "type": "boolean",
+            "description": "Boolean value of the metric (for boolean metrics)"
+          },
+          "text_value": {
+            "type": "string",
+            "description": "Text value of the metric (for text metrics)",
+            "example": "positive"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confidence score of the metric evaluation (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.92
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "AI-generated explanation for the metric result",
+            "example": "Customer expressed satisfaction with the resolution provided"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MetricRole"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "value_type",
+          "role"
+        ],
+        "title": "EvaluationMetric"
+      },
+      "EvaluationEvidence": {
+        "type": "object",
+        "description": "Supporting evidence for an evaluation result",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the evidence"
+          },
+          "snippet_text": {
+            "type": "string",
+            "description": "Text snippet from the call that supports the evaluation",
+            "example": "Thank you so much for helping me reschedule!"
+          },
+          "comment_text": {
+            "type": "string",
+            "description": "Evaluator's comment about this evidence",
+            "example": "Customer expressing gratitude indicates successful service"
+          },
+          "is_positive": {
+            "type": "boolean",
+            "description": "Whether this evidence supports a positive evaluation",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "snippet_text",
+          "is_positive"
+        ],
+        "title": "EvaluationEvidence"
+      },
+      "Evaluator": {
+        "type": "object",
+        "description": "Information about an evaluator used for assessment",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the evaluator"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name of the evaluator",
+            "example": "Customer Satisfaction Evaluator"
+          },
+          "weight": {
+            "type": "number",
+            "description": "Weight of this evaluator in overall scoring (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.8
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Evaluator"
+      },
+      "EvaluationRun": {
+        "type": "object",
+        "description": "Complete evaluation run result for a single evaluator",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the evaluation run"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "score": {
+            "type": "number",
+            "description": "Overall score from this evaluation run (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.82
+          },
+          "score_classification": {
+            "$ref": "#/components/schemas/ScoreClassification"
+          },
+          "summary": {
+            "type": "string",
+            "description": "AI-generated summary of the evaluation results",
+            "example": "Call successfully resolved customer issue with professional service"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the evaluation run started"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the evaluation run completed"
+          },
+          "metrics": {
+            "type": "array",
+            "description": "Individual metrics evaluated in this run",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationMetric"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "description": "Supporting evidence for the evaluation",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationEvidence"
+            }
+          },
+          "evaluator": {
+            "$ref": "#/components/schemas/Evaluator"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "evaluator"
+        ],
+        "title": "EvaluationRun"
+      },
+      "SentimentCategory": {
+        "type": "string",
+        "enum": [
+          "positive",
+          "negative",
+          "neutral"
+        ],
+        "description": "Categorical sentiment classification:\n- positive: Overall positive emotional tone\n- negative: Overall negative emotional tone  \n- neutral: Balanced or neutral emotional tone",
+        "title": "SentimentCategory"
+      },
+      "SentimentAnalysis": {
+        "type": "object",
+        "description": "Sentiment analysis results for a call",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Status of the sentiment analysis job",
+            "example": "completed"
+          },
+          "average_sentiment": {
+            "type": "number",
+            "description": "Average sentiment score across the entire call (0-1, where 1 is most positive)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.72
+          },
+          "average_categorical_sentiment": {
+            "$ref": "#/components/schemas/SentimentCategory"
+          },
+          "common_emotion": {
+            "type": "string",
+            "description": "Most frequently detected emotion throughout the call",
+            "example": "satisfaction"
+          },
+          "emotion_breakdown": {
+            "type": "object",
+            "description": "Detailed breakdown of emotions detected with their frequencies",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "example": {
+              "satisfaction": 0.45,
+              "gratitude": 0.23,
+              "concern": 0.18,
+              "neutral": 0.14
+            }
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "SentimentAnalysis"
+      },
+      "VapiCallUploadRequest": {
+        "type": "object",
+        "description": "Request payload for uploading a VAPI call to Roark",
+        "properties": {
+          "vapi_end_of_call_report_payload": {
+            "type": "object",
+            "description": "Raw VAPI end-of-call-report webhook payload forwarded directly from VAPI",
+            "additionalProperties": true,
+            "example": {
+              "call": {
+                "id": "call-123",
+                "type": "inboundPhoneCall"
+              },
+              "type": "end-of-call-report",
+              "status": "completed",
+              "assistant": {
+                "name": "Agent Smith"
+              },
+              "customer": {
+                "number": "+1234567890"
+              },
+              "artifact": {
+                "recordingUrl": "https://example.com/recording.mp3",
+                "messages": [
+                  {
+                    "role": "system",
+                    "content": "System message"
+                  },
+                  {
+                    "role": "bot",
+                    "content": "Hello, I'm Agent Smith"
+                  },
+                  {
+                    "role": "user",
+                    "content": "Hello"
+                  }
+                ]
+              },
+              "startedAt": "2025-05-19T23:13:32+08:00",
+              "endedAt": "2025-05-19T23:23:32+08:00"
+            }
+          },
+          "properties": {
+            "type": "object",
+            "description": "Optional custom properties to include with the call for filtering and display",
+            "additionalProperties": true,
+            "example": {
+              "business_name": "Acme Corp",
+              "campaign_id": "spring-2025"
+            }
+          },
+          "skip_already_imported": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip import if a call with the same VAPI call ID already exists"
+          }
+        },
+        "required": [
+          "vapi_end_of_call_report_payload"
+        ],
+        "title": "VapiCallUploadRequest"
+      },
+      "RetellCallUploadRequest": {
+        "type": "object",
+        "description": "Request payload for uploading a Retell call to Roark",
+        "properties": {
+          "retell_call_ended_payload": {
+            "type": "object",
+            "description": "Raw Retell call_ended webhook payload forwarded directly from Retell",
+            "additionalProperties": true,
+            "example": {
+              "event": "call_ended",
+              "call": {
+                "call_id": "Jabr9TXYYJHfvl6Syypi88rdAHYHmcq6",
+                "from_number": "+1234567890",
+                "call_type": "web_call",
+                "start_timestamp": "1703302407333",
+                "agent_id": "oBeDLoLOeuAbiuaMFXRtDOLriTJ5tSxD",
+                "recording_url": "https://retell.ai/recordings/call-123456.mp3",
+                "transcript_object": [
+                  {
+                    "role": "agent",
+                    "content": "Hello, thank you for calling!",
+                    "words": [
+                      {
+                        "word": "hi",
+                        "start": 0.7,
+                        "end": 1.3
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "properties": {
+            "type": "object",
+            "description": "Optional custom properties to include with the call for filtering and display",
+            "additionalProperties": true,
+            "example": {
+              "business_name": "Retell Customer",
+              "department": "sales"
+            }
+          },
+          "skip_already_imported": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip import if a call with the same Retell call ID already exists"
+          }
+        },
+        "required": [
+          "retell_call_ended_payload"
+        ],
+        "title": "RetellCallUploadRequest"
+      },
+      "CallUploadResponse": {
+        "type": "object",
+        "description": "Response after successfully uploading a call for analysis",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier assigned to the uploaded call"
+          }
+        },
+        "required": [
+          "call_id"
+        ],
+        "title": "CallUploadResponse"
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "description": "Pagination information for list endpoints",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of items available",
+            "minimum": 0,
+            "example": 150
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether there are more items to fetch",
+            "example": true
+          },
+          "next_cursor": {
+            "type": "string",
+            "description": "Cursor for the next page of items (null if no more pages)",
+            "example": "eyJpZCI6IjEyMzQ1Njc4OTAifQ=="
+          }
+        },
+        "required": [
+          "total",
+          "has_more"
+        ],
+        "title": "PaginationInfo"
+      },
+      "EvaluationJobCreateRequest": {
+        "type": "object",
+        "description": "Request to create a new evaluation job for calls or datasets",
+        "properties": {
+          "call": {
+            "$ref": "#/components/schemas/CallAnalysisCreateRequest",
+            "description": "Single call to evaluate (use either call or dataset, not both)"
+          },
+          "dataset": {
+            "type": "object",
+            "description": "Dataset of calls to evaluate (use either call or dataset, not both)",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the dataset for identification",
+                "example": "Q4 Customer Support Calls"
+              },
+              "calls": {
+                "type": "array",
+                "description": "List of calls to include in the dataset evaluation",
+                "items": {
+                  "$ref": "#/components/schemas/CallAnalysisCreateRequest"
+                },
+                "minItems": 1,
+                "maxItems": 100
+              }
+            },
+            "required": [
+              "name",
+              "calls"
+            ]
+          },
+          "evaluators": {
+            "description": "List of evaluator identifiers to run, or 'all' to run all available evaluators",
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "example": [
+                  "customer_satisfaction",
+                  "call_resolution",
+                  "agent_performance"
+                ]
+              },
+              {
+                "type": "string",
+                "const": "all"
+              }
+            ]
+          }
+        },
+        "required": [
+          "evaluators"
+        ],
+        "title": "EvaluationJobCreateRequest"
+      },
+      "EvaluationJobResponse": {
+        "type": "object",
+        "description": "Response for evaluation job operations",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the evaluation job"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EvaluationJobStatus"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "EvaluationJobResponse"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "get_api_health",
+        "summary": "Get API health status",
+        "description": "Returns the health status of the API and its dependencies. This endpoint can be used for monitoring and health checks.",
+        "tags": [
+          "Health"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API health status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/HealthResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/call-analysis": {
+      "post": {
+        "operationId": "create_call_analysis_job",
+        "summary": "Create call analysis job",
+        "description": "Upload a call recording and create an analysis job to extract insights, transcripts, and metadata from the audio.",
+        "tags": [
+          "Call Analysis"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallAnalysisCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Call analysis job created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CallAnalysisJob"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/call-analysis/{job_id}": {
+      "get": {
+        "operationId": "get_call_analysis_job",
+        "summary": "Get call analysis job",
+        "description": "Retrieve the status and results of a call analysis job by its unique identifier.",
+        "tags": [
+          "Call Analysis"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique identifier of the analysis job"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Call analysis job retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CallAnalysisJob"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Call analysis job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/vapi/call": {
+      "post": {
+        "operationId": "create_vapi_call",
+        "summary": "Send a VAPI call to Roark",
+        "description": "Upload and process a VAPI call recording by forwarding the end-of-call-report webhook payload from VAPI.",
+        "tags": [
+          "Integrations"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VapiCallUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "VAPI call uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CallUploadResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid VAPI payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/retell/call": {
+      "post": {
+        "operationId": "create_retell_call",
+        "summary": "Send a Retell call to Roark",
+        "description": "Upload and process a Retell call recording by forwarding the call_ended webhook payload from Retell AI.",
+        "tags": [
+          "Integrations"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetellCallUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Retell call uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CallUploadResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Retell payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/call/{call_id}/evaluation-run": {
+      "get": {
+        "operationId": "get_call_evaluation_runs",
+        "summary": "Get call evaluation runs",
+        "description": "Fetch evaluation run results for a specific call, including scores, metrics, and supporting evidence.",
+        "tags": [
+          "Call Operations"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique identifier of the call to fetch evaluation runs for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Call evaluation runs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/EvaluationRun"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Call not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/call/{call_id}/sentiment-run": {
+      "get": {
+        "operationId": "get_call_sentiment_analysis",
+        "summary": "Get call sentiment analysis",
+        "description": "Fetch detailed sentiment analysis results for a specific call, including emotional tone, key phrases, and sentiment scores across 64+ emotions.",
+        "tags": [
+          "Call Operations"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique identifier of the call to fetch sentiment analysis for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Call sentiment analysis retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SentimentAnalysis"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Call not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evaluation/job": {
+      "post": {
+        "operationId": "create_evaluation_job",
+        "summary": "Create evaluation job",
+        "description": "Create an evaluation job to assess a single call or dataset of calls using specified evaluators. This allows for comprehensive analysis of agent performance and call quality.",
+        "tags": [
+          "Evaluation"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationJobCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evaluation job created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EvaluationJobResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid evaluation request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evaluation/job/{job_id}": {
+      "get": {
+        "operationId": "get_evaluation_job",
+        "summary": "Get evaluation job",
+        "description": "Retrieve details of a specific evaluation job, including its current status and configuration.",
+        "tags": [
+          "Evaluation"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique identifier of the evaluation job"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation job retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Unique identifier of the evaluation job"
+                            },
+                            "status": {
+                              "$ref": "#/components/schemas/EvaluationJobStatus"
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the evaluation job was created"
+                            },
+                            "completed_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the evaluation job completed (null if still processing)"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Evaluation job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evaluation/job/{job_id}/runs": {
+      "get": {
+        "operationId": "get_evaluation_job_runs",
+        "summary": "Get evaluation job runs",
+        "description": "Retrieve paginated details of evaluation runs for a specific job, including scores, metrics, and evidence for each evaluator.",
+        "tags": [
+          "Evaluation"
+        ],
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique identifier of the evaluation job"
+          },
+          {
+            "name": "next_cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor for the next page of results"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "Number of items to return per page (1-50)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation job runs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "pagination": {
+                              "$ref": "#/components/schemas/PaginationInfo"
+                            },
+                            "runs": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/EvaluationRun"
+                              }
+                            }
+                          },
+                          "required": [
+                            "pagination",
+                            "runs"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Evaluation job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "API health monitoring and status endpoints"
+    },
+    {
+      "name": "Call Analysis",
+      "description": "Upload and analyze voice call recordings with AI-powered insights"
+    },
+    {
+      "name": "Integrations",
+      "description": "Native integrations with VAPI and Retell AI platforms"
+    },
+    {
+      "name": "Call Operations",
+      "description": "Operations on specific calls including evaluation and sentiment analysis"
+    },
+    {
+      "name": "Evaluation",
+      "description": "Create and manage evaluation jobs for assessing call quality and agent performance"
+    }
+  ]
+}

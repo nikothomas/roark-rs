@@ -1,0 +1,16 @@
+additionalProperties:
+  avoidBoxedModels: true
+  bestFitInt: true
+  enumNameSuffix: true
+  hideGenerationTimestamp: true
+  library: reqwest
+  mockall: false
+  packageName: roark-rs
+  packageVersion: 0.0.1
+  preferUnsignedInt: true
+  supportAsync: true
+  supportMiddleware: false
+  supportMultipleResponses: false
+  supportTokenSource: false
+  topLevelApiClient: false
+  useSingleRequestParameter: false

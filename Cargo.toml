@@ -1,0 +1,15 @@
+[package]
+name = "roark-rs"
+version = "0.0.1"
+authors = ["nik@sunnyhealth.ai"]
+description = "# Roark Analytics API - Voice AI Analytics Platform"
+license = "MIT"
+edition = "2024"
+
+[dependencies]
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+serde_repr = "^0.1"
+url = "^2.5"
+uuid = { version = "^1.8", features = ["serde", "v4"] }
+reqwest = { version = "^0.12", default-features = false, features = ["json", "multipart"] }
